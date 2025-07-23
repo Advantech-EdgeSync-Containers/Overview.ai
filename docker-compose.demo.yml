@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # Main vision processing service
+  vision-engine:
+    build:
+      context: ./demo/vision-engine
+      dockerfile: Dockerfile
+    container_name: overview-vision-demo
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+      - TENSORRT_CACHE_PATH=/app/cache
+    volumes:
+      - ./demo/models:/app/models:ro
+      - ./demo/data:/app/data
+      - tensorrt-cache:/app/cache
+    ports:
+      - '5001:5001'
+    depends_on:
+      - database
+      - mqtt-broker
+
+  # Web dashboard interface
+  dashboard:
+    build:
+      context: ./demo/dashboard
+      dockerfile: Dockerfile
+    container_name: overview-dashboard-demo
+    ports:
+      - '8080:80'
+    environment:
+      - VISION_API_URL=http://vision-engine:5001
+      - MQTT_BROKER_URL=ws://mqtt-broker:9001
+    depends_on:
+      - vision-engine
+
+  # MQTT broker for real-time messaging
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0-openssl
+    container_name: overview-mqtt-demo
+    volumes:
+      - ./demo/mosquitto:/mosquitto/config:ro
+    ports:
+      - '1883:1883'
+      - '9001:9001'
+
+  # Node-RED for automation workflows
+  node-red:
+    build:
+      context: ./demo/node-red
+      dockerfile: Dockerfile
+    container_name: overview-nodered-demo
+    ports:
+      - '1880:1880'
+    volumes:
+      - nodered-data:/data
+      - ./demo/node-red/flows:/data/flows
+    environment:
+      - VISION_API_URL=http://vision-engine:5001
+    depends_on:
+      - vision-engine
+      - mqtt-broker
+
+  # PLC simulator for industrial integration demo
+  plc-simulator:
+    build:
+      context: ./demo/plc-simulator
+      dockerfile: Dockerfile
+    container_name: overview-plc-demo
+    ports:
+      - '44818:44818' # EtherNet/IP
+      - '502:502' # Modbus TCP
+    environment:
+      - VISION_SYSTEM_IP=vision-engine
+      - SIMULATION_MODE=true
+    depends_on:
+      - vision-engine
+
+  # FTP server for data export
+  ftp-server:
+    image: stilliard/pure-ftpd
+    container_name: overview-ftp-demo
+    ports:
+      - '21:21'
+      - '30000-30009:30000-30009'
+    environment:
+      - PUBLICHOST=localhost
+      - FTP_USER_NAME=demo
+      - FTP_USER_PASS=demo123
+      - FTP_USER_HOME=/home/demo
+    volumes:
+      - ftp-data:/home/demo
+      - ./demo/exports:/home/demo/exports
+
+volumes:
+  db-data:
+  nodered-data:
+  ftp-data:
+  tensorrt-cache:
+
+networks:
+  default:
+    driver: bridge

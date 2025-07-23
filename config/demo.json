@@ -1,0 +1,48 @@
+{
+  "system": {
+    "name": "Overview.ai Demo System",
+    "version": "1.0.0",
+    "debug": true
+  },
+  "camera": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "fps": 30,
+    "exposure": "auto",
+    "gain": "auto"
+  },
+  "ai": {
+    "models": {
+      "classifier": "/app/models/classifier.onnx",
+      "segmentation": "/app/models/segmentation.onnx",
+      "ocr": "/app/models/ocr.onnx"
+    },
+    "inference": {
+      "batch_size": 1,
+      "confidence_threshold": 0.7,
+      "use_tensorrt": true
+    }
+  },
+  "database": {
+    "host": "database",
+    "port": 5432,
+    "name": "overview_demo",
+    "user": "demo_user",
+    "password": "demo_pass"
+  },
+  "mqtt": {
+    "broker": "mqtt-broker",
+    "port": 1883,
+    "topics": {
+      "results": "overview/results",
+      "status": "overview/status"
+    }
+  },
+  "api": {
+    "host": "0.0.0.0",
+    "port": 5001,
+    "cors_origins": ["*"]
+  }
+}
